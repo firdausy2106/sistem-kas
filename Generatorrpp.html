@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kas Iuran - Print Ready</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Pengaturan khusus saat mode cetak (Print Mode) */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .container {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+            }
+            .shadow-sm, .shadow-md {
+                box-shadow: none !important;
+                border: 1px solid #e2e8f0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans">
+
+    <header class="bg-indigo-700 p-6 text-white shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold italic">REKAP KAS & IURAN</h1>
+            <button onclick="window.print()" class="no-print bg-white text-indigo-700 px-4 py-2 rounded-lg font-bold hover:bg-indigo-50 transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Cetak Laporan
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto mt-8 p-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                <p class="text-sm text-slate-500 uppercase font-bold">Total Debet</p>
+                <h3 id="totalDebet" class="text-2xl font-bold text-emerald-600">Rp 0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                <p class="text-sm text-slate-500 uppercase font-bold">Total Kredit</p>
+                <h3 id="totalKredit" class="text-2xl font-bold text-red-600">Rp 0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500">
+                <p class="text-sm text-slate-500 uppercase font-bold">Saldo Akhir</p>
+                <h3 id="saldoAkhir" class="text-2xl font-bold text-indigo-700">Rp 0</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="no-print bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                <h2 class="text-lg font-semibold mb-4 text-slate-700">Input Transaksi</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600">Keterangan / Nama</label>
+                        <input type="text" id="ket" class="w-full p-2 border rounded-md outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600">Jenis Transaksi</label>
+                        <select id="jenis" class="w-full p-2 border rounded-md outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="debet">Debet (Uang Masuk)</option>
+                            <option value="kredit">Kredit (Uang Keluar)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600">Jumlah (Rp)</label>
+                        <input type="number" id="jumlah" class="w-full p-2 border rounded-md outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button onclick="tambahTransaksi()" class="w-full bg-indigo-600 text-white py-2 rounded-md font-semibold hover:bg-indigo-700 transition">
+                        Simpan Transaksi
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="p-4 text-slate-600 font-semibold">Keterangan</th>
+                                <th class="p-4 text-slate-600 font-semibold">Debet</th>
+                                <th class="p-4 text-slate-600 font-semibold">Kredit</th>
+                                <th class="p-4 text-slate-600 font-semibold text-center no-print">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelBody"></tbody>
+                    </table>
+                </div>
+                <p class="hidden print:block mt-4 text-xs text-slate-400 text-right italic">Dicetak secara otomatis melalui Sistem Kas Iuran.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let transaksi = [];
+
+        function tambahTransaksi() {
+            const ket = document.getElementById('ket').value;
+            const jenis = document.getElementById('jenis').value;
+            const jumlah = parseInt(document.getElementById('jumlah').value);
+
+            if (!ket || !jumlah) return alert("Isi data dengan lengkap!");
+
+            transaksi.push({
+                id: Date.now(),
+                ket,
+                jenis,
+                jumlah
+            });
+
+            document.getElementById('ket').value = "";
+            document.getElementById('jumlah').value = "";
+            render();
+        }
+
+        function render() {
+            const tbody = document.getElementById('tabelBody');
+            let tDebet = 0;
+            let tKredit = 0;
+            
+            tbody.innerHTML = "";
+
+            transaksi.forEach(item => {
+                const isDebet = item.jenis === 'debet';
+                if(isDebet) tDebet += item.jumlah;
+                else tKredit += item.jumlah;
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-4 text-slate-700">${item.ket}</td>
+                        <td class="p-4 text-emerald-600 font-medium">${isDebet ? 'Rp ' + item.jumlah.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-4 text-red-600 font-medium">${!isDebet ? 'Rp ' + item.jumlah.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-4 text-center no-print">
+                            <button onclick="hapus(${item.id})" class="text-red-400 hover:text-red-600">✕</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('totalDebet').innerText = "Rp " + tDebet.toLocaleString('id-ID');
+            document.getElementById('totalKredit').innerText = "Rp " + tKredit.toLocaleString('id-ID');
+            document.getElementById('saldoAkhir').innerText = "Rp " + (tDebet - tKredit).toLocaleString('id-ID');
+        }
+
+        function hapus(id) {
+            if(confirm("Hapus transaksi ini?")) {
+                transaksi = transaksi.filter(t => t.id !== id);
+                render();
+            }
+        }
+    </script>
+</body>
+</html>
